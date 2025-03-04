@@ -5,7 +5,11 @@ import scipy.stats as sps
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from DLCmodel import stats as dlc_stats
+import sys
+sys.path.append('../')
+
+from DLCmodel import stats as dlc_stats_v1
+from DLCmodel import stats_v2 as dlc_stats_v2
 
 
 #tshark -r ../iperf3_sas2msk.pcapng -Y "ipv6.src eq 2a02:6b8:b081:b50a::1:27 and ipv6.dst eq 2a02:6b8:c1b:221f:0:4438:b83a:0 and tcp.srcport eq 62694 and tcp.dstport eq 5201" -e frame.number -e tcp.seq -e frame.time_epoch -e tcp.analysis.retransmission -e tcp.analysis.out_of_order -E separator=, -T fields > sas2msk.txt
@@ -41,6 +45,28 @@ def draw(losses: list[int], delays: list[int]):
     plt.xlabel("Номер пакета")
 
     plt.savefig("real_combined.svg", format='svg')
+
+
+def get_stats_v1(losses: list[int], delays: list[float]) -> None:
+    print("average loss:", dlc_stats_v1.get_average_loss(losses))
+    print("average delay:", dlc_stats_v1.get_average_delay(delays))
+    print("jitter:", dlc_stats_v1.get_jitter(delays))
+    print("average loss burst len:", dlc_stats_v1.get_average_loss_burst_len(losses))
+
+    states = dlc_stats_v1.get_states(losses, delays, 0.55)
+    print("mu:", dlc_stats_v1.get_mu_by_states(states))
+    print("average good burst len:", dlc_stats_v1.get_average_good_burst_len_by_states(states))
+
+
+def get_stats_v2(losses: list[int], delays: list[float]) -> None:
+    print("average loss:", dlc_stats_v2.get_average_loss(losses))
+    print("average delay:", dlc_stats_v2.get_average_delay(delays, losses))
+    print("jitter:", dlc_stats_v2.get_jitter(delays, losses))
+    print("average loss burst len:", dlc_stats_v2.get_average_loss_burst_len(losses))
+
+    states = dlc_stats_v2.get_states(losses, delays, 10)
+    print("mu:", dlc_stats_v2.get_mu_by_states(states))
+    print("average good burst len:", dlc_stats_v2.get_average_good_burst_len_by_states(states))
 
 
 if __name__ == '__main__':
@@ -90,14 +116,13 @@ if __name__ == '__main__':
 
     #draw(losses, delays)
 
-    print("average loss:", dlc_stats.get_average_loss(losses))
-    print("average delay:", dlc_stats.get_average_delay(delays))
-    print("jitter:", dlc_stats.get_jitter(delays))
-    print("average loss burst len:", dlc_stats.get_average_loss_burst_len(losses))
+    print("Stats V1:")
+    get_stats_v1(losses, delays)
+    print()
 
-    states = dlc_stats.get_states(losses, delays, 0.55)
-    print("mu:", dlc_stats.get_mu_by_states(states))
-    print("average good burst len:", dlc_stats.get_average_good_burst_len_by_states(states))
+    print("Stats v2:")
+    get_stats_v2(losses, delays)
+    print()   
 
     corr = sps.pearsonr(delays, losses)[0]
     corr = corr if corr is not np.nan else 0.0

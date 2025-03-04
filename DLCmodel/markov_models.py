@@ -3,7 +3,7 @@ import typing as tp
 
 import numpy as np
 
-from . import states
+from DLCmodel import states
 
 
 class MarkovChainBase(abc.ABC):
@@ -24,14 +24,15 @@ class MarkovChainBase(abc.ABC):
     def _check_input(states: tp.List[states.StateBase], 
                      probs: np.ndarray, 
                      start_distribution: np.ndarray) -> None:
-        assert len(probs.shape) == 2
+        # print(len(states), start_distribution)
+        assert len(probs.shape) == 2, probs.shape
         assert probs.shape[0] == probs.shape[1]
         assert probs.shape[0] == len(states)
         assert len(start_distribution.shape) == 1
         assert start_distribution.shape[0] == len(states)
 
         #assert np.all(probs.sum(axis=1) == 1), probs
-        assert not np.any((probs < 0))
+        assert not np.any((probs < 0)), probs
         assert start_distribution.sum() == 1, start_distribution
 
     def _get_init_state(self) -> int:

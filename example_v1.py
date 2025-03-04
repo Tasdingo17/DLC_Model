@@ -54,7 +54,7 @@ def compare_states(true_states: list[int], computed_states: list[int], delays: l
 
 
 if __name__ == '__main__':
-    dlc_model = DLCmodel.DLCModel(DELAY, JITTER, P_loss, MU, E_b, E_gb, BETA)
+    dlc_model = DLCmodel.DLCModelV1(DELAY, JITTER, P_loss, MU, E_b, E_gb, BETA)
     packets, real_states = dlc_model.gen_sequence(N_PACKETS, True)
     #print(counter)
     real_states_counter = Counter(real_states)
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     corr = corr if corr is not np.nan else 0.0
     print("Pearson corr:", corr)
 
-    draw(losses, delays)
+    #draw(losses, delays)
 
     print("Average loss:", dlc_stats.get_average_loss(losses))
     print("Average loss burst len:", dlc_stats.get_average_loss_burst_len(losses))

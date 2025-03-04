@@ -1,5 +1,7 @@
 tmp_test
 exps_res_dont_touch
-real_combined.png
-combined_const.png
+*.png
 SimpleGilbEll.py
+delay_mm1.py
+compute_mm1_prob.py
+**/__pycache__/

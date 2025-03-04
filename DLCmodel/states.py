@@ -22,7 +22,16 @@ class DummyState(StateBase):
         return 1
     
 
-class DummyStateDouble(StateBase):
+class DummyStateConst(StateBase):
+
+    def __init__(self, delay_val: numbers.Number):
+        self._delay_val = delay_val
+
+    def do_work(self):
+        return self._delay_val
+    
+
+class DummyStateDoubleConst(StateBase):
 
     def __init__(self, delay_val: numbers.Number, loss_val: numbers.Number):
         self._loss_val = loss_val
@@ -133,3 +142,26 @@ class DLCLossState(StateBase):
 
     def do_work(self) -> tp.Tuple[int, numbers.Number]:
         return (1, self._max_delay)
+
+
+from DLCmodel.internal_chains import mm1k_delay
+class DLCQueueStateV2(StateBase):
+
+    def __init__(self, pi1: float, pi2: float, pi3: float, delay: float, jitter: float, jitter_steps: int) -> None:
+        super().__init__()
+        self.mm1k = mm1k_delay.MM1K_Delay(pi1, pi2, pi3, delay, jitter, jitter_steps)
+
+
+    def do_work(self) -> tp.Tuple[int, numbers.Number]:
+        return (0, self.mm1k.get_delay())
+
+
+class DLCLossStateV2(StateBase):
+
+    def __init__(self, max_delay: float) -> None:
+        super().__init__()
+        self.delay = max_delay
+
+    def do_work(self) -> tp.Tuple[int, numbers.Number]:
+        return (1, self.delay)
+

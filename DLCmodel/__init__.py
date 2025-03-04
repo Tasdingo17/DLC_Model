@@ -13,7 +13,7 @@ class ProbsError(Exception):
     pass
 
 
-class DLCModel:
+class DLCModelV1:
 
     def __init__(self, 
                  delay: float, jitter: float,
@@ -81,6 +81,87 @@ class DLCModel:
         #print("Beta threshold is", beta_threshold)
         if not self.beta > beta_threshold:
             raise DelaysError()
+
+    @staticmethod
+    def get_beta_threshold(p_loss, mu):
+        pi1 = (1 - p_loss) * (1 - mu)
+        beta_threshold = 2 - 1 / pi1
+        return beta_threshold
+
+    def gen_sequence(
+            self,
+            n_samples: int, 
+            ret_states: bool = False
+    ) -> tp.Union[tp.List, tp.Tuple[tp.List, tp.List[int]]]:
+        if not ret_states:
+            return [self._markov_chain.step() for _ in range(n_samples)]
+        res_packets = [()] * n_samples
+        res_states = [0] * n_samples 
+        for i in range(n_samples):
+            packet, state = self._markov_chain.step(True)
+            res_packets[i] = packet
+            res_states[i] = state
+        return res_packets, res_states
+    
+
+class DLCModelV2:
+
+    def __init__(self, 
+                 delay: float, jitter: float,
+                 p_loss: float, mu: float,
+                 e_b: float, e_gb: float,
+                 jitter_steps: int,
+    ):
+        self.delay = delay
+        self.jitter = jitter
+        self.p_loss = p_loss
+        self.mu = mu
+        self.e_b = e_b
+        self.e_gb = e_gb
+
+        self._check_input_for_delays()
+        pi1, pi2, pi3 = self._get_states_ditribution()
+        jitter_step = jitter / jitter_steps
+
+        self._state_1 = dlc_states.DLCSimpleState(0, delay - jitter_step, jitter_step)
+        self._state_2 = dlc_states.DLCQueueStateV2(pi1, pi2, pi3, delay, jitter, jitter_steps)
+        self._state_3 = dlc_states.DLCLossStateV2(delay+jitter)
+        start_distribution = np.array([1.0, 0.0, 0.0])
+        self._check_input_for_probs()
+        transition_probs = self._get_transition_probs()
+        #print("Transition probs:\n", transition_probs)
+        self._markov_chain = mmodels.StationaryMarkovChain(
+            [self._state_1, self._state_2, self._state_3],
+            transition_probs,
+            start_distribution
+        )
+
+    def _get_transition_probs(self) -> np.ndarray:
+        p32 = 1 / self.e_b
+        t = (1 / (1 - self.p_loss) - 1) / (self.e_b * (1-self.mu))
+        p23 = ((1-self.mu)/ self.mu) * t
+        p21 = 1 / self.e_gb - p23
+        p12 = self.mu/((1-self.mu) * self.e_gb) - t
+        return np.array(
+            [[1 - p12, p12, 0.0], 
+             [p21, 1 - p21 - p23, p23],
+             [0.0, p32, 1 - p32]]
+        )
+
+    def _get_states_ditribution(self) -> tp.Tuple[float]:
+        """Return pi1, pi2, pi3"""
+        pi3 = self.p_loss 
+        pi2 = self.mu * (1 - self.p_loss)
+        pi1 = (1 - self.p_loss) * (1 - self.mu)
+        return pi1, pi2, pi3
+
+
+    def _check_input_for_probs(self):
+        if not (self.mu * self.e_b - self.e_gb * (self.p_loss / (1 - self.p_loss)) > 0):
+            raise ProbsError()
+
+    def _check_input_for_delays(self):
+        pass
 
     @staticmethod
     def get_beta_threshold(p_loss, mu):
