@@ -5,7 +5,7 @@ from DLCmodel import markov_models
 from DLCmodel import states
 
 EPS_PROB = 0.0001
-
+MAX_JITTER_STEPS = 32
 
 def newton_method(func: tp.Callable, derivative: tp.Callable, start: float = 0.5) -> float:
     x = start
@@ -17,10 +17,14 @@ def newton_method(func: tp.Callable, derivative: tp.Callable, start: float = 0.5
     return x
 
 
+def scale(x, targ_l, targ_r, src_l, src_r) -> float:
+    return targ_l + (x - src_l) * (targ_r - targ_l) / (src_r - src_l)
+
+
 class MM1K_Delay:
     def __init__(self, pi1: float, pi2: float, pi3: float, delay: float, jitter: float, jitter_steps: int):
         self._d = delay
-        self._calc_d2(pi1, pi2, delay, jitter, jitter_steps)
+        self._calc_d2(pi1, pi2, pi3, delay, jitter, jitter_steps)
         print(f'pi1={pi1}, pi2={pi2}, pi3={pi3}, n_steps={self._j_steps}, step={self._step}, d2={self._d2}, offset={self._offset}')
 
         states_list = [states.DummyStateConst(delay + i * self._step) for i in range(self._j_steps+1)]
@@ -28,14 +32,22 @@ class MM1K_Delay:
         init_probs = self._construct_mm1_probs()
         self.MM1_model = markov_models.StationaryMarkovChain(states_list, init_probs, start_distr)
     
-    def _calc_d2(self, pi1: float, pi2: float, delay: float, jitter: float, jitter_steps: int) -> None:
+    def _calc_d2(self, pi1: float, pi2: float, pi3: float, delay: float, jitter: float, jitter_steps: int) -> None:
         j_steps = jitter_steps
         step = jitter / j_steps
-        d2 = (delay - pi1 * (delay - step)) / pi2
-        while d2 >= (delay + jitter):
+        d2 = (delay - pi1 * (delay - step) - pi3 * (delay + jitter)) / pi2
+        d1_init, d2_init = delay - step, d2
+
+        while (d2 >= (delay + jitter)) and (j_steps < MAX_JITTER_STEPS):
             j_steps += 1
             step = jitter / j_steps
-            d2 = (delay - pi1 * (delay - step)) / pi2
+            d2 = (delay - pi1 * (delay - step) - pi3 * (delay + jitter)) / pi2
+        if d2 >= (delay + jitter):
+            print(f"Scaling d2, d1")
+            d2 = scale(d2, targ_l=delay, targ_r=delay+jitter, src_l=delay, src_r=d2_init)
+            d1 = scale(delay-step, targ_l=delay-jitter, targ_r=delay, src_l=d1_init, src_r=delay)
+            step = min(delay - d1, d1 - (delay - jitter))
+            j_steps = int(jitter / step)
         if j_steps != jitter_steps:
             print(f"Increasdc j_steps to agjust d2, j_steps={j_steps}")
 

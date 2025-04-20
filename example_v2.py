@@ -13,7 +13,7 @@ P_loss = 0.01   # P_loss = pi3
 E_b = 2.25
 E_gb = 4.46
 
-DELAY = 4.65
+DELAY = 5
 JITTER = 2
 MIN_JITTER_STEPS = 10
 STEP = JITTER / MIN_JITTER_STEPS
@@ -25,24 +25,24 @@ def draw(losses: list[int], delays: list[int]):
     idxs = range(len(losses))
 
     #задаем местоположение поля с графиком
-    plt.figure(figsize=(14,6))
+    plt.figure(figsize=(10,5))
     # заголовок для текущей области 
-    title = 'Combined (loss scaled)'
+    title = 'Задержки и потери (потери масштабированы)'
     #title += f'\np_loss={P_loss}, MU={MU}, E_b={E_b}, E_gb={E_gb}, delay={DELAY}, jitter={JITTER}, min_jitter_steps={MIN_JITTER_STEPS}'
     plt.title(title)
     # рисуем график в текцщей области
     maxdel = max(delays) + 1 
-    plt.plot(idxs, [loss * maxdel for loss in losses], label='Loss')
+    plt.plot(idxs, [loss * maxdel for loss in losses], linestyle='dashed', label='Loss')
     plt.plot(idxs, delays, label='Delay')
     # сетка графика
     plt.grid(True)
     plt.legend()
 
-    plt.ylabel("Значение")
+    plt.ylabel("Значение, у.е.")
     plt.xlabel("Номер пакета")
 
     plt.tight_layout()
-    plt.savefig("combined.png", format='png')
+    plt.savefig("combined_2.png", format='png')
 
 
 def compare_states(true_states: list[int], computed_states: list[int], delays: list[float]) -> bool:
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     corr = corr if corr is not np.nan else 0.0
     print("Pearson corr:", corr)
 
-    draw(losses, delays)
+    #draw(losses, delays)
 
     print("Average loss:", dlc_stats.get_average_loss(losses))
     print("Average loss burst len:", dlc_stats.get_average_loss_burst_len(losses))
